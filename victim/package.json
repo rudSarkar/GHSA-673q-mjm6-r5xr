@@ -1,0 +1,10 @@
+{
+  "name": "ghsa-673q-victim",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Faithful Next.js `use cache` Flight boundary victim for GHSA-673q-mjm6-r5xr",
+  "scripts": {
+    "start": "node --conditions react-server server.js"
+  },
+  "comment": "react / react-dom / react-server-dom-webpack are installed at an exact, pinned version by the Dockerfile (ARG RSDW_VERSION) so the same image builds the vulnerable (19.2.8) and patched (19.2.9) victim."
+}
